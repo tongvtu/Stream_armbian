@@ -8,12 +8,12 @@ services:
       - ./mediamtx.yml:/mediamtx.yml
 
   stream-manager:
-    # Build locally on the host:
-    build:
-      context: ./manager
-      dockerfile: Dockerfile
-    # Or pull the pre-built multi-arch image from GHCR (uncomment and replace username):
-    # image: ghcr.io/YOUR_GITHUB_USERNAME/stream_armbian/stream-manager:latest
+    # Pull the pre-built multi-arch image from GHCR (default for deployment):
+    image: ghcr.io/tongvtu/stream_armbian/stream-manager:latest
+    # Or build locally on the host for development (uncomment below, comment out image above):
+    # build:
+    #   context: ./manager
+    #   dockerfile: Dockerfile
     container_name: stream-manager
     network_mode: host
     privileged: true
