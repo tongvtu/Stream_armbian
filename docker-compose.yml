@@ -1,0 +1,22 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml
+
+  stream-manager:
+    # Build locally on the host:
+    build:
+      context: ./manager
+      dockerfile: Dockerfile
+    # Or pull the pre-built multi-arch image from GHCR (uncomment and replace username):
+    # image: ghcr.io/YOUR_GITHUB_USERNAME/stream_armbian/stream-manager:latest
+    container_name: stream-manager
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb

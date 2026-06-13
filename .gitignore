@@ -1,0 +1,24 @@
+# Go compiled binaries
+manager/stream-manager
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Docker local data (if any)
+.docker/
+docker-compose.override.yml

@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamArmbian - Android Streaming Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0c0817;
+            --card-bg: rgba(22, 17, 38, 0.5);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-cyan: #00f2fe;
+            --accent-violet: #8a2be2;
+            --accent-green: #00ff87;
+            --accent-orange: #ff7f50;
+            --accent-red: #ff3366;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --font-family: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: linear-gradient(135deg, #080511, #120b24, #080511);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism containers */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 12px 40px 0 rgba(138, 43, 226, 0.15);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 10px 16px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            color: var(--accent-cyan);
+            filter: drop-shadow(0 0 8px var(--accent-cyan));
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+        }
+
+        .status-dot.active {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(0, 255, 135, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .main-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .side-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Video Stream Container */
+        .video-card {
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+            background: #000;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-overlay-msg {
+            position: absolute;
+            z-index: 2;
+            text-align: center;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .video-overlay-msg i {
+            font-size: 48px;
+            color: var(--accent-violet);
+        }
+
+        iframe.stream-player {
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 1;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card-title i {
+            color: var(--accent-cyan);
+        }
+
+        /* Telemetry Details */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Progress Bars & Gauges */
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s ease;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
+        }
+
+        /* Custom color rules for telemetry values */
+        .temp-ok { color: var(--accent-green); }
+        .temp-warn { color: var(--accent-orange); }
+        .temp-danger { color: var(--accent-red); font-weight: bold; }
+
+        /* Quick Controls */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(138, 43, 226, 0.15);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: var(--font-family);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--accent-violet);
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-cyan {
+            background: rgba(0, 242, 254, 0.15);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+        }
+
+        .btn-cyan:hover {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
+            color: #000;
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Endpoints URLs */
+        .url-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+
+        .url-title {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .url-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        }
+
+        .btn-copy {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .btn-copy:hover {
+            color: var(--accent-cyan);
+        }
+
+        /* System Logs Console */
+        .console-box {
+            background: #06040a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #33ff33;
+            height: 180px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* Setup Guides Tabs */
+        .tabs-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: var(--font-family);
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-cyan);
+            border-bottom-color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .guide-step {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .guide-step::before {
+            content: attr(data-step);
+            position: absolute;
+            left: 0;
+            top: 2px;
+            width: 14px;
+            height: 14px;
+            background: var(--accent-cyan);
+            color: #000;
+            border-radius: 50%;
+            font-size: 9px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .guide-step code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(138, 43, 226, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 43, 226, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="glass-card">
+        <div class="logo-area">
+            <i data-lucide="video" class="logo-icon"></i>
+            <div>
+                <h1>StreamArmbian</h1>
+                <p style="font-size: 12px; color: var(--text-secondary);">Android to Headless TV Box Relayer</p>
+            </div>
+        </div>
+        <div class="status-badge">
+            <span id="usb-dot" class="status-dot"></span>
+            <span id="usb-status-text">Đang quét thiết bị...</span>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Main Panel: Player & Resources -->
+        <div class="main-column">
+            <!-- Video Player Card -->
+            <div class="glass-card video-card" id="player-container">
+                <div class="video-overlay-msg" id="video-overlay">
+                    <i data-lucide="video-off"></i>
+                    <h3>Chưa có tín hiệu luồng video</h3>
+                    <p style="font-size: 14px;">Vui lòng kết nối điện thoại và bắt đầu đẩy stream từ app camera.</p>
+                </div>
+                <!-- Will be dynamically loaded with WebRTC iframe -->
+            </div>
+
+            <!-- Dashboard Details Grid (Android & Armbian) -->
+            <div class="stats-grid">
+                <!-- Android Telemetry Card -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="smartphone"></i>
+                            <span>Điện thoại Camera</span>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dòng máy:</span>
+                        <span class="info-value" id="phone-model">N/A</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Android OS:</span>
+                        <span class="info-value" id="phone-os">N/A</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Trạng thái Pin:</span>
+                        <span class="info-value" id="phone-battery-charge">N/A</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Nhiệt độ Pin:</span>
+                        <span class="info-value" id="phone-temp">N/A</span>
+                    </div>
+                    <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                        <span class="info-label" style="width: 100%; justify-content: space-between;">
+                            <span>Mức pin:</span>
+                            <span id="phone-battery-percent">0%</span>
+                        </span>
+                        <div class="progress-container">
+                            <div id="phone-battery-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TV Box Telemetry Card -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="hard-drive"></i>
+                            <span>Armbian TV Box</span>
+                        </div>
+                    </div>
+                    <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 14px;">
+                        <span class="info-label" style="width: 100%; justify-content: space-between;">
+                            <span>Sử dụng CPU:</span>
+                            <span id="box-cpu-percent">0%</span>
+                        </span>
+                        <div class="progress-container">
+                            <div id="box-cpu-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+                    <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 14px;">
+                        <span class="info-label" style="width: 100%; justify-content: space-between;">
+                            <span>Sử dụng RAM (2GB):</span>
+                            <span id="box-ram-percent">0%</span>
+                        </span>
+                        <div class="progress-container">
+                            <div id="box-ram-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+                    <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                        <span class="info-label" style="width: 100%; justify-content: space-between;">
+                            <span>Bộ nhớ đĩa:</span>
+                            <span id="box-disk-percent">0%</span>
+                        </span>
+                        <div class="progress-container">
+                            <div id="box-disk-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Panel: Controls & Logs -->
+        <div class="side-column">
+            <!-- Quick Controls -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="sliders"></i>
+                        <span>Điều khiển nhanh (ADB)</span>
+                    </div>
+                </div>
+                <div class="controls-grid" style="margin-bottom: 12px;">
+                    <button class="btn btn-cyan" onclick="runAdbAction('wake')">
+                        <i data-lucide="play"></i>
+                        Mở màn hình
+                    </button>
+                    <button class="btn" onclick="runAdbAction('sleep')">
+                        <i data-lucide="moon"></i>
+                        Tắt màn hình
+                    </button>
+                </div>
+                <div class="controls-grid">
+                    <button class="btn btn-cyan" onclick="runAdbAction('reboot')">
+                        <i data-lucide="rotate-ccw"></i>
+                        Reboot Điện thoại
+                    </button>
+                    <button class="btn" onclick="runAdbAction('tunnel')">
+                        <i data-lucide="cable"></i>
+                        Reset Tunnel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Connection Endpoints -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="link"></i>
+                        <span>Đường dẫn xem luồng</span>
+                    </div>
+                </div>
+                <div class="url-box">
+                    <div class="url-title">WebRTC (Độ trễ <0.5s)</div>
+                    <div class="url-content">
+                        <span id="url-webrtc">Loading...</span>
+                        <button class="btn-copy" onclick="copyText('url-webrtc')"><i data-lucide="copy" style="width:14px;height:14px;"></i></button>
+                    </div>
+                </div>
+                <div class="url-box">
+                    <div class="url-title">HLS (IPTV / Safari)</div>
+                    <div class="url-content">
+                        <span id="url-hls">Loading...</span>
+                        <button class="btn-copy" onclick="copyText('url-hls')"><i data-lucide="copy" style="width:14px;height:14px;"></i></button>
+                    </div>
+                </div>
+                <div class="url-box">
+                    <div class="url-title">RTSP (VLC Player)</div>
+                    <div class="url-content">
+                        <span id="url-rtsp">Loading...</span>
+                        <button class="btn-copy" onclick="copyText('url-rtsp')"><i data-lucide="copy" style="width:14px;height:14px;"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Guides Card -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="book-open"></i>
+                        <span>Hướng dẫn cấu hình</span>
+                    </div>
+                </div>
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('larix')">Mode 1: Larix Push</button>
+                    <button class="tab-btn" onclick="switchTab('ipwebcam')">Mode 2: IP Webcam</button>
+                </div>
+                <div id="tab-larix" class="tab-content active">
+                    <div class="guide-step" data-step="1">Cắm điện thoại Android vào cổng USB của TV Box. Cho phép **USB Debugging** (Gỡ lỗi USB).</div>
+                    <div class="guide-step" data-step="2">Tải app **Larix Broadcaster** (Miễn phí trên CH Play).</div>
+                    <div class="guide-step" data-step="3">Mở Larix -> Settings -> Connections -> New Connection.</div>
+                    <div class="guide-step" data-step="4">Nhập URL: <code>rtmp://127.0.0.1:1935/live/camera</code> (hoặc <code>rtsp</code> trên cổng <code>8554</code>). Lưu lại.</div>
+                    <div class="guide-step" data-step="5">Quay lại màn hình chính Larix và ấn nút **Ghi (Đỏ)** để bắt đầu stream qua USB.</div>
+                </div>
+                <div id="tab-ipwebcam" class="tab-content">
+                    <div class="guide-step" data-step="1">Cắm USB, mở **USB Debugging** trên điện thoại.</div>
+                    <div class="guide-step" data-step="2">Cài đặt app **IP Webcam** từ CH Play.</div>
+                    <div class="guide-step" data-step="3">Mở app, kéo xuống dưới cùng chọn **Start Server**. Mặc định app sẽ chạy HTTP stream ở cổng 8080.</div>
+                    <div class="guide-step" data-step="4">Hệ thống sẽ tự nhận cổng 8080 qua ADB và kéo luồng về server MediaMTX.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live System Logs -->
+    <div class="glass-card" style="margin-bottom: 24px;">
+        <div class="card-header">
+            <div class="card-title">
+                <i data-lucide="terminal"></i>
+                <span>Nhật ký hoạt động (Manager Logs)</span>
+            </div>
+        </div>
+        <div class="console-box" id="console-logs">Khởi động hệ thống...</div>
+    </div>
+
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // Global state
+        let deviceConnected = false;
+        let activeStream = false;
+        const hostname = window.location.hostname;
+
+        // Dynamic URL setups
+        document.getElementById('url-webrtc').innerText = `http://${hostname}:8889/live/camera`;
+        document.getElementById('url-hls').innerText = `http://${hostname}:8888/live/camera/index.m3u8`;
+        document.getElementById('url-rtsp').innerText = `rtsp://${hostname}:8554/live/camera`;
+
+        // Switch Tabs in Guide
+        function switchTab(mode) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (mode === 'larix') {
+                event.target.classList.add('active');
+                document.getElementById('tab-larix').classList.add('active');
+            } else {
+                event.target.classList.add('active');
+                document.getElementById('tab-ipwebcam').classList.add('active');
+            }
+        }
+
+        // Copy text helper
+        function copyText(id) {
+            const text = document.getElementById(id).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Đã copy đường dẫn thành công!');
+            }).catch(err => {
+                console.error('Lỗi khi copy: ', err);
+            });
+        }
+
+        // Control Actions (ADB Commands)
+        function runAdbAction(action) {
+            fetch('/api/control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ action: action })
+            })
+            .then(res => res.json())
+            .then(data => {
+                appendLog(`[Hệ thống] Gửi lệnh '${action}': ${data.status}`);
+            })
+            .catch(err => {
+                appendLog(`[Lỗi] Lỗi gửi lệnh '${action}': ${err}`);
+            });
+        }
+
+        // Append log to console window
+        const consoleLogs = document.getElementById('console-logs');
+        function appendLog(msg) {
+            const date = new Date().toLocaleTimeString();
+            consoleLogs.innerHTML += `\n[${date}] ${msg}`;
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
+
+        // Load stream inside Player
+        function updatePlayer(hasStream) {
+            const container = document.getElementById('player-container');
+            const overlay = document.getElementById('video-overlay');
+            const existingIframe = document.getElementById('stream-iframe');
+
+            if (hasStream) {
+                if (!existingIframe) {
+                    overlay.style.display = 'none';
+                    const iframe = document.createElement('iframe');
+                    iframe.id = 'stream-iframe';
+                    iframe.className = 'stream-player';
+                    iframe.src = `http://${hostname}:8889/live/camera`;
+                    container.appendChild(iframe);
+                    appendLog('[Video] Trình phát WebRTC đã sẵn sàng và được tải.');
+                }
+            } else {
+                if (existingIframe) {
+                    existingIframe.remove();
+                    overlay.style.display = 'flex';
+                    appendLog('[Video] Mất luồng video, đã đóng trình phát.');
+                }
+            }
+        }
+
+        // Fetch System Telemetry
+        function fetchTelemetry() {
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(data => {
+                    // Update Android Connection Status
+                    const dot = document.getElementById('usb-dot');
+                    const statusText = document.getElementById('usb-status-text');
+                    
+                    if (data.android.connected) {
+                        dot.classList.add('active');
+                        statusText.innerText = `Đã kết nối: ${data.android.model}`;
+                        
+                        document.getElementById('phone-model').innerText = data.android.model;
+                        document.getElementById('phone-os').innerText = `Android ${data.android.os_version}`;
+                        document.getElementById('phone-battery-charge').innerText = data.android.battery.status;
+                        
+                        // Pin level
+                        const batLevel = data.android.battery.level;
+                        document.getElementById('phone-battery-percent').innerText = `${batLevel}%`;
+                        const batBar = document.getElementById('phone-battery-bar');
+                        batBar.style.width = `${batLevel}%`;
+                        
+                        // Pin color coding
+                        if (batLevel < 20) {
+                            batBar.style.background = 'var(--accent-red)';
+                        } else if (batLevel < 50) {
+                            batBar.style.background = 'var(--accent-orange)';
+                        } else {
+                            batBar.style.background = 'linear-gradient(90deg, var(--accent-cyan), var(--accent-green))';
+                        }
+
+                        // Temp coding
+                        const tempVal = document.getElementById('phone-temp');
+                        const tempC = data.android.battery.temperature;
+                        tempVal.innerText = `${tempC}°C`;
+                        tempVal.className = 'info-value';
+                        if (tempC >= 45) {
+                            tempVal.classList.add('temp-danger');
+                        } else if (tempC >= 40) {
+                            tempVal.classList.add('temp-warn');
+                        } else {
+                            tempVal.classList.add('temp-ok');
+                        }
+
+                        if (!deviceConnected) {
+                            appendLog(`[ADB] Phát hiện thiết bị mới: ${data.android.model}`);
+                            deviceConnected = true;
+                        }
+                    } else {
+                        dot.classList.remove('active');
+                        statusText.innerText = "Chưa kết nối USB";
+                        
+                        document.getElementById('phone-model').innerText = 'N/A';
+                        document.getElementById('phone-os').innerText = 'N/A';
+                        document.getElementById('phone-battery-charge').innerText = 'N/A';
+                        document.getElementById('phone-temp').innerText = 'N/A';
+                        document.getElementById('phone-battery-percent').innerText = '0%';
+                        document.getElementById('phone-battery-bar').style.width = '0%';
+                        
+                        if (deviceConnected) {
+                            appendLog('[ADB] Thiết bị Android đã ngắt kết nối USB.');
+                            deviceConnected = false;
+                        }
+                    }
+
+                    // Update TV Box Stats
+                    document.getElementById('box-cpu-percent').innerText = `${data.host.cpu}%`;
+                    document.getElementById('box-cpu-bar').style.width = `${data.host.cpu}%`;
+                    
+                    document.getElementById('box-ram-percent').innerText = `${data.host.ram}%`;
+                    document.getElementById('box-ram-bar').style.width = `${data.host.ram}%`;
+                    
+                    document.getElementById('box-disk-percent').innerText = `${data.host.disk}%`;
+                    document.getElementById('box-disk-bar').style.width = `${data.host.disk}%`;
+
+                    // Check if stream is active on MediaMTX
+                    activeStream = data.stream_active;
+                    updatePlayer(activeStream);
+                })
+                .catch(err => {
+                    console.error("Lỗi lấy thông số hệ thống:", err);
+                });
+        }
+
+        // Fetch logs periodically
+        function fetchLogs() {
+            fetch('/api/logs')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logs) {
+                        consoleLogs.innerHTML = data.logs;
+                        consoleLogs.scrollTop = consoleLogs.scrollHeight;
+                    }
+                });
+        }
+
+        // Initial setup and polling intervals
+        fetchTelemetry();
+        setInterval(fetchTelemetry, 2500); // Poll every 2.5s for metrics
+        setInterval(fetchLogs, 4000);      // Poll logs every 4s
+    </script>
+</body>
+</html>

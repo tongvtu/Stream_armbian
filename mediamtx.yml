@@ -1,0 +1,40 @@
+# MediaMTX Configuration for Android Streaming
+
+# Enable administrative API
+api: yes
+apiAddress: 127.0.0.1:9997
+
+# Enable RTSP server
+rtsp: yes
+rtspAddress: :8554
+protocols: [udp, multicast, tcp]
+
+# Enable RTMP server
+rtmp: yes
+rtmpAddress: :1935
+
+# Enable HLS server (useful for Apple devices/Safari and Smart TVs)
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+
+# Enable WebRTC server (optimal for sub-second latency in browser)
+webrtc: yes
+webrtcAddress: :8889
+webrtcAdditionalHosts: [] # Automatically detect local IP addresses
+
+# Disable unused protocols to save CPU/RAM
+srt: no
+
+# Default path configuration
+paths:
+  all:
+    # Allow clients to publish streams to any path
+    source: publisher
+    
+    # Allow reading streams in any format
+    publishUser:
+    publishPass:
+    readUser:
+    readPass:
